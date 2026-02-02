@@ -12,15 +12,21 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Set lowercase owner
+        id: vars
+        run: |
+          # lower-case the actor so Docker tags are valid
+          echo "owner=$(echo '${{ github.actor }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
+
       - name: Login to GitHub Container Registry (GHCR)
-        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ steps.vars.outputs.owner }} --password-stdin
 
       - name: Build Docker Image
-        run: docker build -t ghcr.io/${{ github.actor }}/${{ github.event.repository.name }}:latest .
+        run: docker build -t ghcr.io/${{ steps.vars.outputs.owner }}/${{ github.event.repository.name }}:latest .
 
       - name: Verify Vue Build Output
         run: |
-          CONTAINER_ID=$(docker create ghcr.io/${{ github.actor }}/${{ github.event.repository.name }}:latest)
+          CONTAINER_ID=$(docker create ghcr.io/${{ steps.vars.outputs.owner }}/${{ github.event.repository.name }}:latest)
           docker cp $CONTAINER_ID:/usr/share/nginx/html ./dist
           docker rm -v $CONTAINER_ID
           ls -la ./dist
